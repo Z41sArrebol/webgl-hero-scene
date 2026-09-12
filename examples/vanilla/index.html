@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebGL Hero Scene — 原生 JS 示例</title>
+    <style>
+      /* 与组件自带的 HERO_SCENE_CSS 一致：只负责定尺寸、铺满、淡入 */
+      :root {
+        --hero-scene-height: 400px;
+      }
+      body {
+        margin: 0;
+        padding: 48px 20px;
+        background: #000;
+        color: #f5f5f7;
+        font-family: 'PingFang SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        line-height: 1.7;
+      }
+      h1 {
+        max-width: 1100px;
+        margin: 0 auto 8px;
+        font-size: 24px;
+      }
+      .note {
+        max-width: 1100px;
+        margin: 24px auto 0;
+        padding-top: 16px;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        color: rgba(255, 255, 255, 0.56);
+        font-size: 13px;
+      }
+      .note code {
+        color: rgba(255, 255, 255, 0.8);
+      }
+
+      .hero-scene {
+        position: relative;
+        width: 100%;
+        height: var(--hero-scene-height, 400px);
+        flex-shrink: 0;
+        overflow: hidden;
+        opacity: 0;
+        transition: opacity 0.6s ease-out;
+      }
+      .hero-scene.is-ready {
+        opacity: 1;
+      }
+      .hero-scene__frame {
+        position: relative;
+        width: 100%;
+        height: 100%;
+      }
+      /* 引擎插入的 canvas 往往自带内联尺寸，这里强制铺满容器 */
+      .hero-scene__frame canvas,
+      .hero-scene__frame > div {
+        width: 100% !important;
+        height: 100% !important;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .hero-scene {
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>WebGL Hero Scene — 原生 JS 版</h1>
+
+    <!-- 场景容器：外层负责尺寸与淡入，内层给引擎挂 canvas -->
+    <div class="hero-scene" id="hero-scene">
+      <div class="hero-scene__frame" id="hero-scene-frame"></div>
+    </div>
+
+    <p class="note">
+      这是一个不依赖任何框架的最小示例：<code>loadSdk</code> → 注入场景 JSON →
+      <code>UnicornStudio.addScene()</code> → 按可见性暂停。把 <code>scene.json</code>
+      换成你自己在 Unicorn Studio 里做的场景即可。<br />
+      ⚠️ 场景数据提取自 moonshot.cn 生产包，版权归月之暗面所有，仅作学习演示；引擎版权归
+      Unicorn Studio，免费套餐限非商业个人项目且导出内容带水印。详见仓库的
+      THIRD-PARTY-NOTICES.md。
+    </p>
+
+    <script>
+      // 引擎走官方 jsDelivr 分发地址；自备授权副本时换成自己的路径
+      const SDK_URL =
+        'https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v2.1.4/dist/unicornStudio.umd.js'
+
+      // 场景文字用的 Noto Sans（OFL），走 CDN 取本仓库里的副本；自备字体就换成自己的地址
+      const FONT_SRC =
+        'https://cdn.jsdelivr.net/gh/Z41sArrebol/webgl-hero-scene@main/public/assets/NotoSans-Latin.woff2'
+
+      const container = document.getElementById('hero-scene')
+
+      /** 按设备能力给一档保守画质 */
+      function detectQuality() {
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        const weak = reduced || (navigator.deviceMemory ?? 8) <= 4 || (navigator.hardwareConcurrency ?? 8) <= 4
+        return { reduced, scale: weak ? 0.4 : 0.5, dpi: weak ? 1 : 1.5, fps: weak ? 24 : 30 }
+      }
+
+      /** 同一个地址只加载一次 */
+      let sdkPromise = null
+      function loadSdk(url) {
+        if (window.UnicornStudio) return Promise.resolve()
+        if (sdkPromise) return sdkPromise
+        sdkPromise = new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+          script.src = url
+          script.async = true
+          script.onload = resolve
+          script.onerror = () => reject(new Error('加载 UnicornStudio 引擎失败：' + url))
+          document.body.appendChild(script)
+        })
+        return sdkPromise
+      }
+
+      async function mount() {
+        const quality = detectQuality()
+
+        // 1) 场景 JSON 写成 <script type="application/json">，引擎按 id 就地读取，不发网络请求
+        const scene = await (await fetch('./scene.json')).json()
+        // 把文字图层的字体指向 CDN（场景原始数据里是个根路径，别人直接拷会 404）
+        const textLayer = (scene.history || []).find((layer) => layer.layerType === 'text')
+        if (textLayer && textLayer.fontCSS) textLayer.fontCSS.src = FONT_SRC
+        const dataScript = document.createElement('script')
+        dataScript.type = 'application/json'
+        dataScript.id = 'hero-scene-data'
+        dataScript.textContent = JSON.stringify(scene)
+        document.body.appendChild(dataScript)
+
+        // 2) 加载引擎并挂载
+        await loadSdk(SDK_URL)
+        const handle = await window.UnicornStudio.addScene({
+          elementId: 'hero-scene-frame',
+          filePath: 'hero-scene-data',
+          scale: quality.scale,
+          dpi: quality.dpi,
+          fps: quality.fps,
+          lazyLoad: false,
+          production: false,
+          altText: 'Hero background animation',
+          ariaLabel: 'Hero background animation',
+        })
+        container.classList.add('is-ready')
+
+        // 3) 滚出视口 / 切后台 / 用户偏好减弱动效时暂停渲染
+        let inView = true
+        const applyPaused = () => {
+          handle.paused = quality.reduced || !inView || document.visibilityState !== 'visible'
+        }
+        new IntersectionObserver(
+          ([entry]) => {
+            inView = entry.isIntersecting
+            applyPaused()
+          },
+          { threshold: 0.05 },
+        ).observe(container)
+        document.addEventListener('visibilitychange', applyPaused)
+        applyPaused()
+
+        // 4) 离开页面时释放 WebGL 上下文
+        window.addEventListener('pagehide', () => handle.destroy?.(), { once: true })
+      }
+
+      mount().catch((error) => console.error('[hero-scene]', error))
+    </script>
+  </body>
+</html>

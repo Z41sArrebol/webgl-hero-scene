@@ -15,11 +15,28 @@
 
 ## 2. 渲染引擎 —— Unicorn Studio 运行时
 
-- **权利人**：Unicorn Studio。
+- **权利人**：Unicorn Studio（UNCRN LLC）。
 - **获取方式**：本仓库**不包含**引擎副本，运行时通过其官方 jsDelivr CDN 加载：
   `https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v2.1.4/dist/unicornStudio.umd.js`
-- **说明**：引擎以 UMD 形式挂载到 `window.UnicornStudio`。本仓库的组件只是调用方，
-  引擎本身的使用条款、授权范围与计费方式请以 Unicorn Studio 官方说明为准。
+- **引擎许可原文**（摘自其源码仓库 README，2026-09-12 核对）：
+
+  > Copyright © 2026 Unicorn Studio (UNCRN LLC)
+  >
+  > Permission is granted to use this software only for integration with legitimate Unicorn Studio
+  > projects. The source code is made available for transparency and to facilitate integration, but
+  > remains proprietary.
+  >
+  > Unauthorized uses include but are not limited to:
+  > 1. Using this software in any way that violates Unicorn Studio's Terms of Service
+  > 2. Creating derivative works not approved by Unicorn Studio
+  > 3. **Using this software with non-Unicorn Studio projects**
+  > 4. Reverse engineering this software to recreate Unicorn Studio functionality
+  > 5. Removing or altering any license, copyright, watermark, or other proprietary notices
+
+- **平台套餐限制**（摘自 unicorn.studio/terms，2026-09-12 核对）：免费套餐**仅限非商业个人项目**，
+  且**导出内容会带水印**，并禁止移除、遮蔽或规避该水印；去水印或商用需订阅付费计划。
+- **对本仓库的含义**：① 组件只能用于渲染在 Unicorn Studio 编辑器里做出的场景；② 想把本仓库的组件
+  用于商业站点，请先自行确认已满足上述条款；③ 本仓库不含引擎副本（因此也不存在移除版权声明的问题），
   如你有自备授权副本，可用组件的 `sdkUrl` 属性指向自己的路径。
 - 引擎源码仓库：<https://github.com/hiunicornstudio/unicornstudio.js>
 

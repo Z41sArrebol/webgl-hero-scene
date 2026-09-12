@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import './HeroScene.css'
+import { ensureHeroSceneStyles } from '../lib/heroSceneStyles'
 
 /**
  * <HeroScene /> — 用一份 UnicornStudio 场景工程渲染 WebGL 背景的 React 组件
@@ -17,6 +17,14 @@ import './HeroScene.css'
 /** 默认从官方 jsDelivr 拉引擎；如需自备副本，用 sdkUrl 换成自己的路径 */
 const DEFAULT_SDK_URL =
   'https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v2.1.4/dist/unicornStudio.umd.js'
+
+/**
+ * 默认字体：场景文字图层用的 Noto Sans（OFL 许可）。
+ * 走 jsDelivr 分发本仓库里的那份副本，使用方不需要自带字体文件；
+ * 想换成自己的字体就传 fontSrc。
+ */
+const DEFAULT_FONT_SRC =
+  'https://cdn.jsdelivr.net/gh/Z41sArrebol/webgl-hero-scene@main/public/assets/NotoSans-Latin.woff2'
 
 export interface SceneQuality {
   /** 渲染倍率（1 为设计尺寸） */
@@ -36,7 +44,7 @@ export interface SceneTextOverride {
   fontSize?: number
   /** 文字层宽高比，需与字号、字符数配套 */
   aspectRatio?: number
-  /** 场景字体地址 */
+  /** 场景字体地址，默认走 CDN；自备字体时传自己的地址 */
   fontSrc?: string
   /** 指定图层 id；默认取第一个 layerType === 'text' 的图层 */
   textLayerId?: string
@@ -57,6 +65,8 @@ export interface HeroSceneProps extends SceneTextOverride {
   paused?: boolean
   /** 引擎加载失败时显示的兜底图 */
   fallbackImg?: string
+  /** 是否自动注入组件自带的样式，默认 true；CSP 不允许内联样式时可关掉并改用 HERO_SCENE_CSS */
+  injectStyles?: boolean
   className?: string
   style?: CSSProperties
   onReady?: (quality: SceneQuality) => void
@@ -153,7 +163,7 @@ export default function HeroScene({
   text,
   fontSize,
   aspectRatio,
-  fontSrc,
+  fontSrc = DEFAULT_FONT_SRC,
   textLayerId,
   height = 400,
   sdkUrl = DEFAULT_SDK_URL,
@@ -161,11 +171,15 @@ export default function HeroScene({
   pauseOffscreen = true,
   paused = false,
   fallbackImg,
+  injectStyles = true,
   className,
   style,
   onReady,
   onError,
 }: HeroSceneProps) {
+  // 幂等：样式在首帧前就位，容器此时还是透明的
+  if (injectStyles) ensureHeroSceneStyles()
+
   const [ids] = useState(() => {
     const n = ++instanceSeq
     return { element: `hero-scene-el-${n}`, data: `hero-scene-data-${n}` }
